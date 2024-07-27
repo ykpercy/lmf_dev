@@ -2,3 +2,9 @@
 .env.local
 
 logs/*
+!logs/.gitkeep
+
+__pycache__
+lmf_dev/__pycache__
+stock_api/__pycache__
+
