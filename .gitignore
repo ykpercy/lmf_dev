@@ -1,10 +1,24 @@
+# Python 虚拟环境
+venv/
+env/
+.venv/
+
+# PyCharm 项目设置
+.idea/
+
+# VS Code 设置
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
 .env
 .env.local
 
 logs/*
 !logs/.gitkeep
 
-__pycache__
-lmf_dev/__pycache__
-stock_api/__pycache__
+__pycache__/
+*.pyc
+
 
