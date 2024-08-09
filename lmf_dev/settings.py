@@ -123,7 +123,8 @@ CORS_ALLOW_ALL_ORIGINS = True  # 仅在开发环境中使用，生产环境应�
 
 # Crontab 设置
 CRONJOBS = [
-    ('0 17 * * 1-5', 'stock_api.cron.update_stock_info_daily')
+    ('0 17 * * 1-5', 'stock_api.cron.update_stock_info'),
+    ('5 17 * * 1-5', 'stock_api.cron.update_stock_spot_data')
 ]
 
 ROOT_URLCONF = 'lmf_dev.urls'

@@ -9,16 +9,27 @@ import logging
 # 设置日志
 logger = logging.getLogger('django')
 
-
 class Command(BaseCommand):
     help = 'Update stock info and spot data using akshare'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--update-type',
+            type=str,
+            help='Specify which update to run: "info", "spot", or "all"'
+        )
+
     @transaction.atomic
     def handle(self, *args, **options):
+        update_type = options['update_type']
         # self.stdout.write(f'开始更新股票数据... 时间: {timezone.now()}')
         logger.info(f'开始更新股票数据. 时间: {timezone.now()}')
-        self.update_stock_info()
-        self.update_stock_spot_data()
+        if update_type in [None, 'all', 'info']:
+            self.update_stock_info()
+        if update_type in [None, 'all', 'spot']:
+            self.update_stock_spot_data()
+        # self.update_stock_info()
+        # self.update_stock_spot_data()
         logger.info(f'成功更新所有股票数据. 时间: {timezone.now()}')
         # self.stdout.write(self.style.SUCCESS(f'Successfully updated stock data. 时间: {timezone.now()}'))
 
