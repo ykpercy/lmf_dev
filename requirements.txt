@@ -1,6 +1,6 @@
 Django==5.0.6
 djangorestframework==3.14.0
-akshare==1.14.19
+akshare
 psycopg2-binary==2.9.9  # 使用 binary 版本避免编译问题  # PostgreSQL adapter for Python
 python-dotenv==1.0.0    # 用于管理环境变量
 django-cors-headers==4.3.1
