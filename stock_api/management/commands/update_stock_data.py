@@ -148,7 +148,7 @@ class Command(BaseCommand):
         success_count = 0
         error_count = 0
         
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             future_to_stock = {executor.submit(self.update_single_stock_spot_data, stock): stock for stock in stocks}
             for future in concurrent.futures.as_completed(future_to_stock):
                 stock = future_to_stock[future]
