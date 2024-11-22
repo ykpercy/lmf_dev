@@ -91,7 +91,7 @@ LOGGING = {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': LOG_FILE,
             'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
+            'backupCount': 3,
             'formatter': 'verbose',
         },
         'console': {

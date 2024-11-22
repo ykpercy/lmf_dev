@@ -21,4 +21,7 @@ logs/*
 __pycache__/
 *.pyc
 
+xueqiu_cookie.json
+
+
 

@@ -5,6 +5,7 @@ from django.db import transaction
 import concurrent.futures
 from django.utils import timezone
 import logging
+from stock_api.utils.stock_spot_xq import stock_individual_spot_xq  # 导入我们自己的函数
 
 # 设置日志
 logger = logging.getLogger('django')
@@ -36,8 +37,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def update_stock_info(self):
         # self.stdout.write('Updating stock info...')
-        logger.info('开始更新股票基本信息')
-        try:
+        try:     
             stock_info_origin = ak.stock_zh_a_spot()
             stock_info_origin['代码'] = stock_info_origin['代码'].str.upper()
             stock_info = stock_info_origin.iloc[:, :2].rename(columns={'代码': 'code', '名称': 'name'})
@@ -61,26 +61,6 @@ class Command(BaseCommand):
             
             # 使用批量创建或更新
             created, updated = self.bulk_update_or_create(StockInfo, update_data, ['name'], batch_size=512)
-
-            # for _, row in stock_info.iterrows():
-            #     code, name = row['code'], row['name']
-            #     StockInfo.objects.update_or_create(
-            #         code=code,
-            #         defaults={'name': name}
-            #     )
-
-            # # 删除所有现有的 StockInfo 记录
-            # StockInfo.objects.all().delete()
-            # self.stdout.write(self.style.SUCCESS('已删除所有现有股票信息')) 
-            
-            # # 批量创建新的 StockInfo 记录
-            # stocks_to_create = [
-            #     StockInfo(code=row['code'], name=row['name'])
-            #     for _, row in stock_info.iterrows()
-            # ]
-            
-            # # 使用 bulk_create 批量创建新记录
-            # StockInfo.objects.bulk_create(stocks_to_create)
             
             # self.stdout.write(self.style.SUCCESS(f'成功创建 {created} 条新的股票信息记录，更新 {updated} 条记录'))
             logger.info(f'成功创建 {created} 条新的股票信息记录，更新 {updated} 条记录')
@@ -108,9 +88,35 @@ class Command(BaseCommand):
 
         return len(to_create), len(to_update)
 
+    def update_stock_spot_data(self):
+        logger.info(f'开始更新股票即时数据. 时间: {timezone.now()}')
+        
+        stocks = StockInfo.objects.all()
+        success_count = 0
+        error_count = 0
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            future_to_stock = {executor.submit(self.update_single_stock_spot_data, stock): stock for stock in stocks}
+            for future in concurrent.futures.as_completed(future_to_stock):
+                stock = future_to_stock[future]
+                try:
+                    result = future.result()
+                    if "Error" in result:
+                        error_count += 1
+                    else:
+                        success_count += 1
+                    logger.info(result)
+                except Exception as exc:
+                    error_message = f'{stock.code} 生成了一个异常: {exc}'
+                    logger.error(error_message)
+                    error_count += 1
+
+        logger.info(f'完成更新股票即时数据. 成功: {success_count}, 失败: {error_count}')
+
+
     def update_single_stock_spot_data(self, stock):
         try:
-            spot_data = ak.stock_individual_spot_xq(symbol=stock.code)
+            spot_data = stock_individual_spot_xq(symbol=stock.code)
             if not spot_data.empty:
                 data = spot_data.set_index('item')['value'].to_dict()
                 StockSpot.objects.update_or_create(
@@ -137,37 +143,3 @@ class Command(BaseCommand):
         except Exception as e:
             return f'Error updating {stock.code}: {str(e)}'
 
-    def update_stock_spot_data(self):
-        # self.stdout.write(f'Updating stock spot data... 时间: {timezone.now()}')
-        logger.info(f'开始更新股票即时数据. 时间: {timezone.now()}')
-        # 删除所有现有的 StockSpot 记录
-        # StockSpot.objects.all().delete()
-        # self.stdout.write(self.style.SUCCESS('已删除所有现有股票估值信息')) 
-
-        stocks = StockInfo.objects.all()
-        success_count = 0
-        error_count = 0
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-            future_to_stock = {executor.submit(self.update_single_stock_spot_data, stock): stock for stock in stocks}
-            for future in concurrent.futures.as_completed(future_to_stock):
-                stock = future_to_stock[future]
-                try:
-                    result = future.result()
-                    # self.stdout.write(result)
-                    if "Error" in result:
-                        error_count += 1
-                    else:
-                        success_count += 1
-                    logger.info(result)
-                except Exception as exc:
-                    # self.stdout.write(f'{stock.code} 生成了一个异常: {exc}')
-                    error_message = f'{stock.code} 生成了一个异常: {exc}'
-                    logger.error(error_message)
-                    error_count += 1
-        # for stock in stocks:
-        #     result = self.update_single_stock_spot_data(stock)
-        #     self.stdout.write(result)
-
-        # self.stdout.write(self.style.SUCCESS(f'Finished updating stock spot data. 时间: {timezone.now()}'))
-        logger.info(f'完成更新股票即时数据. 成功: {success_count}, 失败: {error_count}')
